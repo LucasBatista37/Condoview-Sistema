@@ -6,6 +6,8 @@ const Dashboard1 = () => import('../views/avisos.vue');
 const Dashboard2 = () => import('../views/assembleia.vue');
 const Dashboard3 = () => import('../views/Dashboard3.vue');
 const ComingSoon = () => import('../views/encomendas.vue');
+const Register = () => import('../views/Register.vue');
+
 
 Vue.use(Router);
 
@@ -28,10 +30,15 @@ export default new Router({
             component: Dashboard2,
         },
         {
-            path: '/dashboard3',
-            name: 'Dashboard3',
-            component: Dashboard3,
+            path: '/register',
+            name: 'Register',
+            component: Register,
         },
+        {
+            path: '/register',
+            name: 'Register',
+            component: Register,
+        },     
         {
             path: '/encomendas',
             name: 'ComingSoon',

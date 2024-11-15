@@ -1,15 +1,15 @@
 <template>
   <div id="app">
-    <wrapper /> <!-- Componente que vai incluir o <router-view /> -->
+    <wrapper /> 
   </div>
 </template>
 
 <script>
-import Wrapper from './layout/Wrapper.vue'; // Importa o componente Wrapper
+import Wrapper from './layout/Wrapper.vue'; 
 export default {
   name: 'App',
   components: {
-    Wrapper, // Registra o Wrapper como um componente
+    Wrapper, 
   },
 };
 </script>

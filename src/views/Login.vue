@@ -10,7 +10,8 @@
         <label for="password">Senha</label>
         <input type="password" id="password" v-model="password" required />
       </div>
-      <button type="submit">Entrar</button>
+      <button type="submit" class="btn-login">Entrar</button>
+      <button type="button" class="btn-register" @click="goToRegister">Cadastrar</button>
       <div class="error" v-if="error">{{ error }}</div>
     </form>
   </div>
@@ -23,12 +24,15 @@ export default {
     return {
       username: '',
       password: '',
-      error: '' 
+      error: ''
     };
   },
   methods: {
     handleLogin() {
-      this.$router.push({ name: 'SideBar' }); 
+      this.$router.push({ name: 'SideBar' });
+    },
+    goToRegister() {
+      this.$router.push({ name: 'Register' });
     }
   }
 };
@@ -36,51 +40,80 @@ export default {
 
 <style scoped>
 .login-container {
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-h2 {
+  padding: 50px;
+  background-color: #2c2c2c;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
   text-align: center;
 }
 
+h2 {
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  color: #6f42c1;
+}
+
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 label {
   display: block;
   margin-bottom: 5px;
+  font-weight: bold;
+  color: #ffffff;
 }
 
 input {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 12px;
+  border: 1px solid #6f42c1;
+  border-radius: 6px;
+  background-color: #3c3c3c;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  border-color: #6f42c1;
 }
 
 button {
   width: 100%;
-  padding: 10px;
-  background-color: #007bff;
-  color: white;
+  padding: 12px;
+  font-size: 1em;
+  border-radius: 6px;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 10px;
 }
 
-button:hover {
-  background-color: #0056b3;
+.btn-login {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.btn-login:hover {
+  background-color: #593c9a;
+}
+
+.btn-register {
+  background-color: #444;
+  color: white;
+}
+
+.btn-register:hover {
+  background-color: #555;
 }
 
 .error {
-  color: red;
-  text-align: center;
-  margin-top: 10px;
+  color: #ff4d4d;
+  margin-top: 15px;
+  font-weight: bold;
 }
 </style>

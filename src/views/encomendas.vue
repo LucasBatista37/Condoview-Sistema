@@ -32,7 +32,7 @@
 
         <div class="form-group">
           <label for="image">
-            <i class="fas fa-image"></i> Imagem
+            <i class="fas fa-image"></i> Imagem (opcional)
           </label>
           <input type="file" id="image" @change="handleImageUpload" />
         </div>
@@ -50,34 +50,76 @@
     </div>
 
     <div class="card-container" v-if="showCard">
-      <div class="card">
+      <div class="card" v-for="pkg in packages" :key="pkg._id">
         <div class="card-header">
-          <span class="card-title">{{ title || 'Título da Encomenda' }}</span>
+          <span class="card-title">{{ pkg.title || 'Título da Encomenda' }}</span>
           <div class="options-container">
-            <button class="btn-options" @click="toggleOptions">
+            <button class="btn-options" @click="toggleOptions(pkg._id)">
               ⋮
             </button>
-            <div v-if="showMenu" class="options-menu">
-              <button class="btn-edit" @click="editNotice">
+            <div v-if="showMenu[pkg._id]" class="options-menu">
+              <button class="btn-edit" @click="openEditModal(pkg)">
                 <i class="fas fa-edit"></i> Editar
               </button>
-              <button class="btn-delete" @click="deleteNotice">
+              <button class="btn-delete" @click="deletePackage(pkg._id)">
                 <i class="fas fa-trash"></i> Excluir
               </button>
             </div>
           </div>
         </div>
         <div class="card-body">
-          <p><strong>Apartamento:</strong> {{ apartment || 'N/A' }}</p>
-          <p style="margin-top: 10px;"><strong>Data e Hora:</strong> {{ dateTime || 'N/A' }}</p>
-          <img v-if="imageUrl" :src="imageUrl" alt="Imagem da Encomenda" class="encomenda-image"/>
+          <p><strong>Apartamento:</strong> {{ pkg.apartment || 'N/A' }}</p>
+          <p style="margin-top: 10px;"><strong>Data e Hora:</strong> {{ pkg.time || 'N/A' }}</p>
+          <img v-if="pkg.imagePath" :src="pkg.imagePath" alt="Imagem da Encomenda" class="encomenda-image"/>
         </div>
+      </div>
+    </div>
+
+    <div v-if="showEditModal" class="modal">
+      <div class="modal-content">
+        <span class="close" @click="closeEditModal">&times;</span>
+        <h2>Editar Encomenda</h2>
+        <form @submit.prevent="saveEdit">
+          <div class="form-group">
+            <label for="edit-title">
+              <i class="fas fa-pencil-alt"></i> Título
+            </label>
+            <input type="text" id="edit-title" v-model="title" required />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-apartment">
+              <i class="fas fa-home"></i> Apartamento
+            </label>
+            <input type="text" id="edit-apartment" v-model="apartment" required />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-datetime">
+              <i class="fas fa-calendar-alt"></i> Data e Hora
+            </label>
+            <input type="datetime-local" id="edit-datetime" v-model="dateTime" required />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-image">
+              <i class="fas fa-image"></i> Imagem (opcional)
+            </label>
+            <input type="file" id="edit-image" @change="handleImageUpload" />
+          </div>
+
+          <button type="submit" class="btn-submit">
+            <i class="fas fa-save"></i> Salvar Alterações
+          </button>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: 'DashboardEncomendas',
   data() {
@@ -86,58 +128,78 @@ export default {
       apartment: '',
       dateTime: '',
       imageUrl: '',
+      packages: [],
       showForm: false,
       showCard: true,
-      showMenu: false
+      showMenu: {},
+      showEditModal: false,
+      editPackageId: null
     };
   },
   methods: {
-    submitForm() {
-      console.log('Encomenda publicada:', {
-        title: this.title,
-        apartment: this.apartment,
-        dateTime: this.dateTime,
-        imageUrl: this.imageUrl
-      });
-      this.showCard = true;
-      this.showForm = false;
-      this.title = '';
-      this.apartment = '';
-      this.dateTime = '';
-      this.imageUrl = '';
-      this.showMenu = false;
-    },
     closeForm() {
       this.showForm = false;
       this.showCard = true;
     },
-    toggleOptions() {
-      this.showMenu = !this.showMenu;
+    async submitForm() {
+      try {
+        const newPackage = {
+          title: this.title,
+          apartment: this.apartment,
+          time: this.dateTime,
+          imagePath: this.imageUrl || null
+        };
+        const response = await axios.post('https://backend-condoview.onrender.com/api/users/package', newPackage);
+        this.packages.push(response.data.newPackage);
+        this.resetForm();
+      } catch (error) {
+        console.error("Erro ao adicionar encomenda:", error);
+      }
     },
-    editNotice() {
-      console.log('Editando encomenda:', {
-        title: this.title,
-        apartment: this.apartment,
-        dateTime: this.dateTime,
-        imageUrl: this.imageUrl
-      });
-      this.showForm = true;
-      this.showCard = false;
-      this.showMenu = false;
+    async fetchPackages() {
+      try {
+        const response = await axios.get('https://backend-condoview.onrender.com/api/users/admin/package');
+        this.packages = response.data;
+      } catch (error) {
+        console.error("Erro ao listar encomendas:", error);
+      }
     },
-    deleteNotice() {
-      console.log('Excluindo encomenda:', {
-        title: this.title,
-        apartment: this.apartment,
-        dateTime: this.dateTime,
-        imageUrl: this.imageUrl
-      });
-      this.title = '';
-      this.apartment = '';
-      this.dateTime = '';
-      this.imageUrl = '';
-      this.showCard = false;
-      this.showMenu = false;
+    async deletePackage(id) {
+      try {
+        await axios.delete(`https://backend-condoview.onrender.com/api/users/admin/package/${id}`);
+        this.packages = this.packages.filter(pkg => pkg._id !== id);
+      } catch (error) {
+        console.error("Erro ao deletar encomenda:", error);
+      }
+    },
+    openEditModal(pkg) {
+      this.title = pkg.title;
+      this.apartment = pkg.apartment;
+      this.dateTime = pkg.time;
+      this.imageUrl = pkg.imagePath || '';
+      this.editPackageId = pkg._id;
+      this.showEditModal = true;
+    },
+    closeEditModal() {
+      this.resetForm();
+    },
+    async saveEdit() {
+      try {
+        const updatedPackage = {
+          title: this.title,
+          apartment: this.apartment,
+          time: this.dateTime,
+          imagePath: this.imageUrl || null
+        };
+        const response = await axios.put(`https://backend-condoview.onrender.com/api/users/admin/package/${this.editPackageId}`, updatedPackage);
+        const index = this.packages.findIndex(pkg => pkg._id === this.editPackageId);
+        if (index !== -1) {
+          this.packages[index] = response.data.updatedPackage;
+        }
+        this.closeEditModal();
+      } catch (error) {
+        console.error("Erro ao atualizar encomenda:", error);
+      }
     },
     handleImageUpload(event) {
       const file = event.target.files[0];
@@ -148,9 +210,26 @@ export default {
         };
         reader.readAsDataURL(file);
       }
+    },
+    resetForm() {
+      this.title = '';
+      this.apartment = '';
+      this.dateTime = '';
+      this.imageUrl = '';
+      this.showForm = false;
+      this.showCard = true;
+      this.showEditModal = false;
+      this.editPackageId = null;
+      this.showMenu = {};
+    },
+    toggleOptions(id) {
+      this.$set(this.showMenu, id, !this.showMenu[id]);
     }
+  },
+  mounted() {
+    this.fetchPackages();
   }
-}
+};
 </script>
 
 <style>
@@ -237,6 +316,23 @@ input[type="file"] {
 
 .card-container {
   margin-top: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #6f42c1 #f1f1f1;
+}
+
+.card-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.card-container::-webkit-scrollbar-thumb {
+  background-color: #6f42c1;
+  border-radius: 10px;
+}
+
+.card-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 
 .card {
@@ -274,8 +370,8 @@ input[type="file"] {
 
 .options-menu {
   position: absolute;
-  right: 20px; 
-  top: -12px; 
+  right: 20px;
+  top: -12px;
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -314,5 +410,43 @@ input[type="file"] {
   max-width: 100%;
   margin-top: 15px;
   border-radius: 4px;
+}
+
+.modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #6f42c1 #f1f1f1;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background-color: #6f42c1;
+  border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 </style>

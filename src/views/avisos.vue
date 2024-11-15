@@ -49,33 +49,74 @@
     </div>
 
     <div class="card-container" v-if="showCard">
-      <div class="card">
+      <div class="card" v-for="notice in notices" :key="notice._id">
         <div class="card-header">
-          <span class="card-title">{{ title || 'Título do Aviso' }}</span>
+          <span class="card-title">{{ notice.title || 'Título do Aviso' }}</span>
           <div class="options-container">
-            <button class="btn-options" @click="toggleOptions">
+            <button class="btn-options" :data-id="notice._id" @click="toggleOptions(notice._id)">
               ⋮
             </button>
-            <div v-if="showMenu" class="options-menu">
-              <button class="btn-edit" @click="editNotice">
+            <div class="options-menu" :data-id="notice._id" v-if="showMenu[notice._id]">
+              <button class="btn-edit" @click="openEditModal(notice)">
                 <i class="fas fa-edit"></i> Editar
               </button>
-              <button class="btn-delete" @click="deleteNotice">
+              <button class="btn-delete" @click="deleteNotice(notice._id)">
                 <i class="fas fa-trash"></i> Excluir
               </button>
             </div>
           </div>
         </div>
         <div class="card-body">
-          <span class="card-icon" :class="selectedIcon"></span>
-          <p>{{ message || 'Descrição do aviso' }}</p>
+          <span class="card-icon" :class="notice.icon"></span>
+          <p>{{ notice.message || 'Descrição do aviso' }}</p>
         </div>
+      </div>
+    </div>
+
+    <div v-if="showEditModal" class="modal">
+      <div class="modal-content">
+        <span class="close" @click="closeEditModal">&times;</span>
+        <h2>Editar Aviso</h2>
+        <form @submit.prevent="saveEdit">
+          <div class="form-group">
+            <label for="edit-title">
+              <i class="fas fa-pencil-alt"></i> Título
+            </label>
+            <input type="text" id="edit-title" v-model="title" required />
+          </div>
+
+          <div class="form-group">
+            <label for="edit-message">
+              <i class="fas fa-comment-dots"></i> Descrição
+            </label>
+            <textarea id="edit-message" v-model="message" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-icon">
+              <i class="fas fa-icon"></i> Ícone
+            </label>
+            <select id="edit-icon" v-model="selectedIcon" required>
+              <option value="" disabled selected>Selecione um ícone</option>
+              <option value="fas fa-bell">🔔 Notificação</option>
+              <option value="fas fa-question-circle">❓ Informação</option>
+              <option value="fas fa-exclamation-circle">⚠️ Alerta</option>
+              <option value="fas fa-check-circle">✅ Sucesso</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-submit">
+            <i class="fas fa-save"></i> Salvar Alterações
+          </button>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: 'Dashboard1',
   data() {
@@ -85,66 +126,110 @@ export default {
       selectedIcon: '',
       showForm: false,
       showCard: true,
-      showMenu: false
+      showMenu: {},
+      notices: [],
+      showEditModal: false,
+      editNoticeId: null
     };
   },
   methods: {
-    submitForm() {
-      console.log('Aviso publicado:', {
-        title: this.title,
-        message: this.message,
-        icon: this.selectedIcon
-      });
-      this.showCard = true;
-      this.showForm = false;
+    async submitForm() {
+      try {
+        const newNotice = {
+          title: this.title,
+          message: this.message,
+          date: new Date().toISOString(),
+          icon: this.selectedIcon
+        };
+        const response = await axios.post('https://backend-condoview.onrender.com/api/users/admin/notices', newNotice);
+        this.notices.push(response.data);
+        this.showCard = true;
+        this.showForm = false;
+        this.title = '';
+        this.message = '';
+        this.selectedIcon = '';
+        this.showMenu = {};
+      } catch (error) {
+        console.error("Erro ao criar aviso:", error);
+        alert("Houve um erro ao criar o aviso.");
+      }
+    },
+    async fetchNotices() {
+      try {
+        const response = await axios.get('https://backend-condoview.onrender.com/api/users/admin/notices');
+        this.notices = response.data;
+      } catch (error) {
+        console.error("Erro ao obter avisos:", error);
+      }
+    },
+    async deleteNotice(id) {
+      try {
+        await axios.delete(`https://backend-condoview.onrender.com/api/users/admin/notices/${id}`);
+        this.notices = this.notices.filter(notice => notice._id !== id);
+        console.log("Aviso deletado com sucesso.");
+      } catch (error) {
+        console.error("Erro ao deletar o aviso:", error);
+      }
+    },
+    openEditModal(notice) {
+      this.title = notice.title;
+      this.message = notice.message;
+      this.selectedIcon = notice.icon;
+      this.editNoticeId = notice._id;
+      this.showEditModal = true;
+    },
+    closeEditModal() {
+      this.showEditModal = false;
       this.title = '';
       this.message = '';
       this.selectedIcon = '';
-      this.showMenu = false;
+      this.editNoticeId = null;
+    },
+    async saveEdit() {
+      try {
+        const updatedNotice = {
+          title: this.title,
+          message: this.message,
+          date: new Date().toISOString(),
+          icon: this.selectedIcon
+        };
+        const response = await axios.put(`https://backend-condoview.onrender.com/api/users/admin/notices/${this.editNoticeId}`, updatedNotice);
+        const index = this.notices.findIndex(notice => notice._id === this.editNoticeId);
+        if (index !== -1) {
+          this.notices[index] = response.data;
+        }
+        this.closeEditModal();
+      } catch (error) {
+        console.error("Erro ao atualizar o aviso:", error);
+      }
     },
     closeForm() {
       this.showForm = false;
       this.showCard = true;
     },
-    toggleOptions() {
-      this.showMenu = !this.showMenu;
-    },
-    editNotice() {
-      console.log('Editando aviso:', {
-        title: this.title,
-        message: this.message,
-        icon: this.selectedIcon
-      });
-      this.showForm = true;
-      this.showCard = false;
-      this.showMenu = false;
-    },
-    deleteNotice() {
-      console.log('Excluindo aviso:', {
-        title: this.title,
-        message: this.message,
-        icon: this.selectedIcon
-      });
-      this.title = '';
-      this.message = '';
-      this.selectedIcon = '';
-      this.showCard = false;
-      this.showMenu = false;
+    toggleOptions(id) {
+      this.$set(this.showMenu, id, !this.showMenu[id]);
     },
     handleClickOutside(event) {
-      const menu = this.$el.querySelector('.options-menu');
-      const button = this.$el.querySelector('.btn-options');
-      if (this.showMenu && menu && !menu.contains(event.target) && !button.contains(event.target)) {
-        this.showMenu = false;
-      }
+      Object.keys(this.showMenu).forEach(id => {
+        const menu = this.$el.querySelector(`.options-menu[data-id="${id}"]`);
+        const button = this.$el.querySelector(`.btn-options[data-id="${id}"]`);
+        if (this.showMenu[id] && menu && !menu.contains(event.target) && !button.contains(event.target)) {
+          this.$set(this.showMenu, id, false);
+        }
+      });
     }
+  },
+  mounted() {
+    this.fetchNotices();
   }
-}
+};
 </script>
 
 <style>
 .dashboard {
   max-width: 800px;
+  height: 700px;
   margin: 0 auto;
   padding: 20px;
   border: 1px solid #ddd;
@@ -230,6 +315,23 @@ textarea {
 
 .card-container {
   margin-top: 20px;
+  max-height: 550px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #6f42c1 #f1f1f1;
+}
+
+.card-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.card-container::-webkit-scrollbar-thumb {
+  background-color: #6f42c1;
+  border-radius: 10px;
+}
+
+.card-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 
 .card {
@@ -267,8 +369,8 @@ textarea {
 
 .options-menu {
   position: absolute;
-  right: 20px; 
-  top: -7px; 
+  right: 20px;
+  top: -7px;
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -306,5 +408,43 @@ textarea {
 .card-icon {
   font-size: 24px;
   margin-right: 10px;
+}
+
+.modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #6f42c1 #f1f1f1;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background-color: #6f42c1;
+  border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 </style>
